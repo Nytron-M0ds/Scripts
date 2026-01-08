@@ -1,0 +1,58 @@
+═══════════════════════════════════════════════════════════════
+   NYTRON - Steal a Brainrot Script
+   LOADSTRINGS PRONTOS PARA USO
+═══════════════════════════════════════════════════════════════
+
+🔑 KEY DE TESTE:
+   KEY-NYTRON-7DIAS-TESTE
+   KEY-NYTRON-1DIA-ADMIN
+   KEY-NYTRON-30DIAS-VIP
+
+═══════════════════════════════════════════════════════════════
+
+📋 LOADSTRING (Quando subir no GitHub):
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Nytron-M0ds/Scripts/main/StealBrainrot.lua"))()
+
+═══════════════════════════════════════════════════════════════
+
+📋 LOADSTRING DIRETO (Cole no executor):
+
+-- Copie o conteúdo do arquivo StealBrainrot_OBFUSCATED.lua
+-- ou StealBrainrot_HEX.lua
+
+═══════════════════════════════════════════════════════════════
+
+✅ FUNÇÕES INCLUÍDAS:
+
+ESP:
+  • ESP X-Ray (vê através das paredes)
+  • ESP Lines (linhas até os alvos)
+  • ESP em Mim (highlight grande em você)
+
+SPEED (MOLAS):
+  • Speed Correr + Pular Alto (juntos)
+  • Speed só Correr Rápido
+  • Speed só Pular Alto
+
+TELEPORT:
+  • TP Base/Spawn
+  • TP Brainrot (aleatório)
+  • TP Mais Próximo
+
+═══════════════════════════════════════════════════════════════
+
+📱 INTERFACE:
+
+1. Tela de Loading inicial (rápida)
+2. Tela de Login com Key
+3. Notificação verde "Logado com sucesso"
+4. Segunda tela de Loading
+5. Notificação "Carregamento concluído"
+6. Botão flutuante com logo "N" (arrastável)
+7. Painel com todas as funções
+8. Botão minimizar (triângulo ▼)
+
+═══════════════════════════════════════════════════════════════
+
+NYTRON MODS © 2025
