@@ -1,6 +1,6 @@
 --[[
-    NYTRON - Steal a Brainrot V7
-    ESP Laser + TP Base (com proteção)
+    NYTRON - Steal a Brainrot V8
+    ESP + TP + Speed + Pulo + Anti Hit
     
     Key: NYTRON-INFINITO
 ]]
@@ -34,6 +34,18 @@ local LaserAtivo = false
 local LaserBeam = nil
 local Logado = false
 local TPLoop = nil
+
+-- Estados dos toggles
+local SpeedAtivo = false
+local PuloAtivo = false
+local AntiHitAtivo = false
+
+-- Valores originais
+local OriginalSpeed = 16
+local OriginalJump = 50
+
+-- Conexões
+local AntiHitConnection = nil
 
 -- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
@@ -100,8 +112,8 @@ LoginStatus.Parent = LoginFrame
 -- PAINEL PRINCIPAL
 --========================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 200, 0, 175)
-MainFrame.Position = UDim2.new(0, 15, 0.5, -87)
+MainFrame.Size = UDim2.new(0, 200, 0, 290)
+MainFrame.Position = UDim2.new(0, 15, 0.5, -145)
 MainFrame.BackgroundColor3 = Dark
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
@@ -123,24 +135,39 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = Header
 
+-- Função criar botão
 local function CriarBotao(texto, posY, cor)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -16, 0, 32)
+    btn.Size = UDim2.new(1, -16, 0, 28)
     btn.Position = UDim2.new(0, 8, 0, posY)
     btn.BackgroundColor3 = cor or Card
     btn.Text = texto
     btn.TextColor3 = cor == Green and Color3.fromRGB(0,0,0) or White
-    btn.TextSize = 12
+    btn.TextSize = 11
     btn.Font = Enum.Font.GothamMedium
     btn.Parent = MainFrame
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     return btn
 end
 
+-- Botões
 local ESPBtn = CriarBotao("ESP BASE (OFF)", 40, Card)
-local TPBtn = CriarBotao("TP BASE", 78, Green)
-local SetBaseBtn = CriarBotao("MARCAR MINHA BASE", 116, Card)
+local TPBtn = CriarBotao("TP BASE", 72, Green)
+local SetBaseBtn = CriarBotao("MARCAR BASE", 104, Card)
 
+-- Separador
+local Sep = Instance.new("Frame")
+Sep.Size = UDim2.new(1, -16, 0, 1)
+Sep.Position = UDim2.new(0, 8, 0, 140)
+Sep.BackgroundColor3 = Gray
+Sep.Parent = MainFrame
+
+-- Novos botões
+local SpeedBtn = CriarBotao("SPEED (OFF)", 148, Card)
+local PuloBtn = CriarBotao("PULO ALTO (OFF)", 180, Card)
+local AntiHitBtn = CriarBotao("ANTI HIT (OFF)", 212, Card)
+
+-- Status
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -16, 0, 18)
 StatusLabel.Position = UDim2.new(0, 8, 1, -22)
@@ -158,11 +185,11 @@ StatusLabel.Parent = MainFrame
 
 local function Notify(texto, cor)
     local notif = Instance.new("Frame")
-    notif.Size = UDim2.new(0, 220, 0, 40)
-    notif.Position = UDim2.new(0.5, -110, 0, -50)
+    notif.Size = UDim2.new(0, 200, 0, 35)
+    notif.Position = UDim2.new(0.5, -100, 0, -40)
     notif.BackgroundColor3 = Dark
     notif.Parent = ScreenGui
-    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 6)
     Instance.new("UIStroke", notif).Color = cor or Green
     
     local nText = Instance.new("TextLabel")
@@ -170,13 +197,13 @@ local function Notify(texto, cor)
     nText.BackgroundTransparency = 1
     nText.Text = texto
     nText.TextColor3 = cor or Green
-    nText.TextSize = 12
+    nText.TextSize = 11
     nText.Font = Enum.Font.GothamMedium
     nText.Parent = notif
     
-    notif:TweenPosition(UDim2.new(0.5, -110, 0, 15), "Out", "Back", 0.3, true)
-    task.delay(1.5, function()
-        notif:TweenPosition(UDim2.new(0.5, -110, 0, -50), "In", "Back", 0.2, true)
+    notif:TweenPosition(UDim2.new(0.5, -100, 0, 10), "Out", "Back", 0.3, true)
+    task.delay(1.2, function()
+        notif:TweenPosition(UDim2.new(0.5, -100, 0, -40), "In", "Back", 0.2, true)
         task.delay(0.3, function() notif:Destroy() end)
     end)
 end
@@ -231,7 +258,7 @@ end
 
 local function ToggleESP()
     if not BasePosition then
-        Notify("Marque sua base primeiro!", Color3.fromRGB(255, 80, 80))
+        Notify("Marque sua base!", Color3.fromRGB(255, 80, 80))
         return
     end
     
@@ -242,120 +269,145 @@ local function ToggleESP()
         ESPBtn.BackgroundColor3 = Green
         ESPBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         CriarLaser()
-        Notify("ESP Ativado!")
+        Notify("ESP ON")
     else
         ESPBtn.Text = "ESP BASE (OFF)"
         ESPBtn.BackgroundColor3 = Card
         ESPBtn.TextColor3 = White
         DestruirLaser()
-        Notify("ESP Desativado!")
+        Notify("ESP OFF")
     end
 end
 
--- TP BASE COM PROTEÇÃO
+-- TP BASE
 local function TPBase()
     if not BasePosition then
-        Notify("Marque sua base primeiro!", Color3.fromRGB(255, 80, 80))
+        Notify("Marque sua base!", Color3.fromRGB(255, 80, 80))
         return
     end
     
-    Notify("Teleportando...")
-    
-    -- Posição de destino (no chão, não no ar)
     local destino = CFrame.new(BasePosition.X, BasePosition.Y, BasePosition.Z)
     
-    -- Parar loop anterior
-    if TPLoop then
-        TPLoop:Disconnect()
-        TPLoop = nil
-    end
+    if TPLoop then TPLoop:Disconnect() end
     
-    -- PROTEÇÃO: Salvar e modificar estados
-    local oldHealth = Humanoid.Health
-    local oldMaxHealth = Humanoid.MaxHealth
-    local oldWalkSpeed = Humanoid.WalkSpeed
-    local oldJumpPower = Humanoid.JumpPower
-    
-    -- Tentar god mode temporário
+    local healthConn
     pcall(function()
-        Humanoid.Health = Humanoid.MaxHealth
-    end)
-    
-    -- Desativar dano temporariamente (se possível)
-    local healthConnection
-    pcall(function()
-        healthConnection = Humanoid.HealthChanged:Connect(function(health)
-            if health < oldMaxHealth then
-                Humanoid.Health = oldMaxHealth
-            end
+        healthConn = Humanoid.HealthChanged:Connect(function()
+            Humanoid.Health = Humanoid.MaxHealth
         end)
     end)
     
-    -- Zerar velocidade
-    pcall(function()
-        HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-        HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        HumanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    end)
-    
-    -- Teleport em loop
     local startTime = tick()
-    local teleportCount = 0
-    
     TPLoop = RunService.Heartbeat:Connect(function()
-        teleportCount = teleportCount + 1
-        
         if tick() - startTime > 0.8 then
             TPLoop:Disconnect()
-            TPLoop = nil
-            
-            -- Desconectar proteção de vida
-            if healthConnection then
-                healthConnection:Disconnect()
-            end
-            
-            -- Curar depois do TP
-            pcall(function()
-                Humanoid.Health = Humanoid.MaxHealth
-            end)
-            
+            if healthConn then healthConn:Disconnect() end
+            pcall(function() Humanoid.Health = Humanoid.MaxHealth end)
             Notify("Teleportado!")
             return
         end
         
-        -- Teleport
         pcall(function()
             HumanoidRootPart.CFrame = destino
-        end)
-        
-        pcall(function()
-            Character:PivotTo(destino)
-        end)
-        
-        -- Manter velocidade zerada
-        pcall(function()
             HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
             HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        end)
-        
-        -- Manter vida cheia durante TP
-        pcall(function()
-            if Humanoid.Health < Humanoid.MaxHealth then
-                Humanoid.Health = Humanoid.MaxHealth
-            end
         end)
     end)
 end
 
 local function MarcarBase()
     BasePosition = HumanoidRootPart.Position
-    StatusLabel.Text = "Base: Marcada!"
+    StatusLabel.Text = "Base: OK"
     StatusLabel.TextColor3 = Green
-    Notify("Base marcada aqui!")
+    Notify("Base marcada!")
     
     if LaserAtivo then
         DestruirLaser()
         CriarLaser()
+    end
+end
+
+-- SPEED
+local function ToggleSpeed()
+    SpeedAtivo = not SpeedAtivo
+    
+    if SpeedAtivo then
+        SpeedBtn.Text = "SPEED (ON)"
+        SpeedBtn.BackgroundColor3 = Green
+        SpeedBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        pcall(function()
+            Humanoid.WalkSpeed = 80
+        end)
+        Notify("Speed ON")
+    else
+        SpeedBtn.Text = "SPEED (OFF)"
+        SpeedBtn.BackgroundColor3 = Card
+        SpeedBtn.TextColor3 = White
+        pcall(function()
+            Humanoid.WalkSpeed = OriginalSpeed
+        end)
+        Notify("Speed OFF")
+    end
+end
+
+-- PULO ALTO
+local function TogglePulo()
+    PuloAtivo = not PuloAtivo
+    
+    if PuloAtivo then
+        PuloBtn.Text = "PULO ALTO (ON)"
+        PuloBtn.BackgroundColor3 = Green
+        PuloBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        pcall(function()
+            Humanoid.JumpPower = 120
+            Humanoid.JumpHeight = 30
+        end)
+        Notify("Pulo Alto ON")
+    else
+        PuloBtn.Text = "PULO ALTO (OFF)"
+        PuloBtn.BackgroundColor3 = Card
+        PuloBtn.TextColor3 = White
+        pcall(function()
+            Humanoid.JumpPower = OriginalJump
+            Humanoid.JumpHeight = 7.2
+        end)
+        Notify("Pulo Alto OFF")
+    end
+end
+
+-- ANTI HIT / ANTI KNOCKBACK
+local function ToggleAntiHit()
+    AntiHitAtivo = not AntiHitAtivo
+    
+    if AntiHitAtivo then
+        AntiHitBtn.Text = "ANTI HIT (ON)"
+        AntiHitBtn.BackgroundColor3 = Green
+        AntiHitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        
+        -- Anti Knockback: zera velocidade constantemente
+        AntiHitConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                local vel = HumanoidRootPart.Velocity
+                -- Se velocidade for muito alta (knockback), zera
+                if vel.Magnitude > 50 then
+                    HumanoidRootPart.Velocity = Vector3.new(0, vel.Y, 0)
+                    HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, HumanoidRootPart.AssemblyLinearVelocity.Y, 0)
+                end
+            end)
+        end)
+        
+        Notify("Anti Hit ON")
+    else
+        AntiHitBtn.Text = "ANTI HIT (OFF)"
+        AntiHitBtn.BackgroundColor3 = Card
+        AntiHitBtn.TextColor3 = White
+        
+        if AntiHitConnection then
+            AntiHitConnection:Disconnect()
+            AntiHitConnection = nil
+        end
+        
+        Notify("Anti Hit OFF")
     end
 end
 
@@ -369,7 +421,7 @@ LoginBtn.MouseButton1Click:Connect(function()
         LoginFrame.Visible = false
         MainFrame.Visible = true
         Logado = true
-        Notify("Logado com sucesso!")
+        Notify("Logado!")
     else
         LoginStatus.Text = "Key invalida!"
     end
@@ -378,6 +430,9 @@ end)
 ESPBtn.MouseButton1Click:Connect(ToggleESP)
 TPBtn.MouseButton1Click:Connect(TPBase)
 SetBaseBtn.MouseButton1Click:Connect(MarcarBase)
+SpeedBtn.MouseButton1Click:Connect(ToggleSpeed)
+PuloBtn.MouseButton1Click:Connect(TogglePulo)
+AntiHitBtn.MouseButton1Click:Connect(ToggleAntiHit)
 
 -- Draggable
 local dragging, dragStart, startPos
@@ -402,11 +457,38 @@ Player.CharacterAdded:Connect(function(char)
     Humanoid = char:WaitForChild("Humanoid")
     HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
     
+    -- Reaplicar configurações
+    task.wait(0.5)
+    
+    if SpeedAtivo then
+        pcall(function() Humanoid.WalkSpeed = 80 end)
+    end
+    
+    if PuloAtivo then
+        pcall(function() 
+            Humanoid.JumpPower = 120
+            Humanoid.JumpHeight = 30
+        end)
+    end
+    
     if LaserAtivo and BasePosition then
-        task.wait(1)
         CriarLaser()
+    end
+    
+    -- Reconectar Anti Hit
+    if AntiHitAtivo then
+        if AntiHitConnection then AntiHitConnection:Disconnect() end
+        AntiHitConnection = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                local vel = HumanoidRootPart.Velocity
+                if vel.Magnitude > 50 then
+                    HumanoidRootPart.Velocity = Vector3.new(0, vel.Y, 0)
+                    HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, HumanoidRootPart.AssemblyLinearVelocity.Y, 0)
+                end
+            end)
+        end)
     end
 end)
 
-print("[NYTRON] V7 Carregado!")
+print("[NYTRON] V8 Carregado!")
 print("[NYTRON] Key: NYTRON-INFINITO")
