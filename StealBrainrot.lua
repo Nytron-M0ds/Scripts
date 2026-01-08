@@ -1,6 +1,6 @@
 --[[
-    NYTRON - Steal a Brainrot V6
-    ESP Laser + TP Base (anti-cheat bypass)
+    NYTRON - Steal a Brainrot V7
+    ESP Laser + TP Base (com proteção)
     
     Key: NYTRON-INFINITO
 ]]
@@ -10,7 +10,6 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -40,7 +39,6 @@ local TPLoop = nil
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NYTRON_Steal"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = Player.PlayerGui end
 
@@ -53,9 +51,7 @@ LoginFrame.Position = UDim2.new(0.5, -130, 0.5, -90)
 LoginFrame.BackgroundColor3 = Dark
 LoginFrame.Parent = ScreenGui
 Instance.new("UICorner", LoginFrame).CornerRadius = UDim.new(0, 12)
-local loginStroke = Instance.new("UIStroke", LoginFrame)
-loginStroke.Color = Green
-loginStroke.Thickness = 2
+Instance.new("UIStroke", LoginFrame).Color = Green
 
 local LoginTitle = Instance.new("TextLabel")
 LoginTitle.Size = UDim2.new(1, 0, 0, 50)
@@ -76,7 +72,6 @@ KeyInput.PlaceholderColor3 = Gray
 KeyInput.TextColor3 = White
 KeyInput.TextSize = 13
 KeyInput.Font = Enum.Font.Gotham
-KeyInput.ClearTextOnFocus = false
 KeyInput.Parent = LoginFrame
 Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 8)
 
@@ -111,11 +106,8 @@ MainFrame.BackgroundColor3 = Dark
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-local mainStroke = Instance.new("UIStroke", MainFrame)
-mainStroke.Color = Green
-mainStroke.Thickness = 2
+Instance.new("UIStroke", MainFrame).Color = Green
 
--- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundColor3 = Card
@@ -131,7 +123,6 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = Header
 
--- Botões
 local function CriarBotao(texto, posY, cor)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -16, 0, 32)
@@ -150,7 +141,6 @@ local ESPBtn = CriarBotao("ESP BASE (OFF)", 40, Card)
 local TPBtn = CriarBotao("TP BASE", 78, Green)
 local SetBaseBtn = CriarBotao("MARCAR MINHA BASE", 116, Card)
 
--- Status
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -16, 0, 18)
 StatusLabel.Position = UDim2.new(0, 8, 1, -22)
@@ -191,7 +181,7 @@ local function Notify(texto, cor)
     end)
 end
 
--- Criar Laser ESP
+-- ESP Laser
 local function CriarLaser()
     if LaserBeam then
         pcall(function() LaserBeam.beam:Destroy() end)
@@ -227,7 +217,7 @@ local function CriarLaser()
     beam.FaceCamera = true
     beam.Parent = HumanoidRootPart
     
-    LaserBeam = {beam = beam, att0 = att0, att1 = att1, basePart = basePart}
+    LaserBeam = {beam = beam, att0 = att0, basePart = basePart}
 end
 
 local function DestruirLaser()
@@ -262,7 +252,7 @@ local function ToggleESP()
     end
 end
 
--- TP BASE COM LOOP (ANTI-CHEAT BYPASS)
+-- TP BASE COM PROTEÇÃO
 local function TPBase()
     if not BasePosition then
         Notify("Marque sua base primeiro!", Color3.fromRGB(255, 80, 80))
@@ -271,41 +261,88 @@ local function TPBase()
     
     Notify("Teleportando...")
     
-    local destino = CFrame.new(BasePosition + Vector3.new(0, 3, 0))
+    -- Posição de destino (no chão, não no ar)
+    local destino = CFrame.new(BasePosition.X, BasePosition.Y, BasePosition.Z)
     
-    -- Parar loop anterior se existir
+    -- Parar loop anterior
     if TPLoop then
         TPLoop:Disconnect()
         TPLoop = nil
     end
     
-    -- Desativar física temporariamente
-    local oldVelocity = HumanoidRootPart.Velocity
-    local oldGravity = Workspace.Gravity
+    -- PROTEÇÃO: Salvar e modificar estados
+    local oldHealth = Humanoid.Health
+    local oldMaxHealth = Humanoid.MaxHealth
+    local oldWalkSpeed = Humanoid.WalkSpeed
+    local oldJumpPower = Humanoid.JumpPower
     
+    -- Tentar god mode temporário
+    pcall(function()
+        Humanoid.Health = Humanoid.MaxHealth
+    end)
+    
+    -- Desativar dano temporariamente (se possível)
+    local healthConnection
+    pcall(function()
+        healthConnection = Humanoid.HealthChanged:Connect(function(health)
+            if health < oldMaxHealth then
+                Humanoid.Health = oldMaxHealth
+            end
+        end)
+    end)
+    
+    -- Zerar velocidade
     pcall(function()
         HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
         HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        HumanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     end)
     
-    -- Loop de teleport por 0.5 segundos
+    -- Teleport em loop
     local startTime = tick()
+    local teleportCount = 0
+    
     TPLoop = RunService.Heartbeat:Connect(function()
-        if tick() - startTime > 0.5 then
+        teleportCount = teleportCount + 1
+        
+        if tick() - startTime > 0.8 then
             TPLoop:Disconnect()
             TPLoop = nil
+            
+            -- Desconectar proteção de vida
+            if healthConnection then
+                healthConnection:Disconnect()
+            end
+            
+            -- Curar depois do TP
+            pcall(function()
+                Humanoid.Health = Humanoid.MaxHealth
+            end)
+            
             Notify("Teleportado!")
             return
         end
         
+        -- Teleport
         pcall(function()
             HumanoidRootPart.CFrame = destino
-            HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-            HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         end)
         
         pcall(function()
             Character:PivotTo(destino)
+        end)
+        
+        -- Manter velocidade zerada
+        pcall(function()
+            HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+            HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end)
+        
+        -- Manter vida cheia durante TP
+        pcall(function()
+            if Humanoid.Health < Humanoid.MaxHealth then
+                Humanoid.Health = Humanoid.MaxHealth
+            end
         end)
     end)
 end
@@ -371,5 +408,5 @@ Player.CharacterAdded:Connect(function(char)
     end
 end)
 
-print("[NYTRON] V6 Carregado!")
+print("[NYTRON] V7 Carregado!")
 print("[NYTRON] Key: NYTRON-INFINITO")
