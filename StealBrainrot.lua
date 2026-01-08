@@ -1,6 +1,6 @@
 --[[
-    NYTRON - Steal a Brainrot
-    ESP Laser + TP Base (leva brainrot junto)
+    NYTRON - Steal a Brainrot V6
+    ESP Laser + TP Base (anti-cheat bypass)
     
     Key: NYTRON-INFINITO
 ]]
@@ -30,12 +30,11 @@ local White = Color3.fromRGB(255, 255, 255)
 local Gray = Color3.fromRGB(100, 100, 100)
 
 -- Variáveis
-local MinhaBase = nil
 local BasePosition = nil
 local LaserAtivo = false
 local LaserBeam = nil
-local LaserConnection = nil
 local Logado = false
+local TPLoop = nil
 
 -- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
@@ -58,17 +57,15 @@ local loginStroke = Instance.new("UIStroke", LoginFrame)
 loginStroke.Color = Green
 loginStroke.Thickness = 2
 
--- Logo/Titulo
 local LoginTitle = Instance.new("TextLabel")
 LoginTitle.Size = UDim2.new(1, 0, 0, 50)
 LoginTitle.BackgroundTransparency = 1
-LoginTitle.Text = "🔒 NYTRON"
+LoginTitle.Text = "NYTRON"
 LoginTitle.TextColor3 = Green
 LoginTitle.TextSize = 22
 LoginTitle.Font = Enum.Font.GothamBold
 LoginTitle.Parent = LoginFrame
 
--- Input Key
 local KeyInput = Instance.new("TextBox")
 KeyInput.Size = UDim2.new(1, -30, 0, 38)
 KeyInput.Position = UDim2.new(0, 15, 0, 55)
@@ -83,7 +80,6 @@ KeyInput.ClearTextOnFocus = false
 KeyInput.Parent = LoginFrame
 Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 8)
 
--- Botao Login
 local LoginBtn = Instance.new("TextButton")
 LoginBtn.Size = UDim2.new(1, -30, 0, 38)
 LoginBtn.Position = UDim2.new(0, 15, 0, 105)
@@ -95,7 +91,6 @@ LoginBtn.Font = Enum.Font.GothamBold
 LoginBtn.Parent = LoginFrame
 Instance.new("UICorner", LoginBtn).CornerRadius = UDim.new(0, 8)
 
--- Status Login
 local LoginStatus = Instance.new("TextLabel")
 LoginStatus.Size = UDim2.new(1, 0, 0, 20)
 LoginStatus.Position = UDim2.new(0, 0, 1, -25)
@@ -110,8 +105,8 @@ LoginStatus.Parent = LoginFrame
 -- PAINEL PRINCIPAL
 --========================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 200)
-MainFrame.Position = UDim2.new(0, 20, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 200, 0, 175)
+MainFrame.Position = UDim2.new(0, 15, 0.5, -87)
 MainFrame.BackgroundColor3 = Dark
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
@@ -122,158 +117,128 @@ mainStroke.Thickness = 2
 
 -- Header
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 35)
+Header.Size = UDim2.new(1, 0, 0, 32)
 Header.BackgroundColor3 = Card
 Header.Parent = MainFrame
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 
-local HeaderFix = Instance.new("Frame")
-HeaderFix.Size = UDim2.new(1, 0, 0, 10)
-HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.BackgroundColor3 = Card
-HeaderFix.BorderSizePixel = 0
-HeaderFix.Parent = Header
-
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.Size = UDim2.new(1, 0, 1, 0)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "NYTRON"
 TitleLabel.TextColor3 = Green
-TitleLabel.TextSize = 14
+TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
--- Minimizar
-local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 25, 0, 25)
-MinBtn.Position = UDim2.new(1, -32, 0.5, -12)
-MinBtn.BackgroundTransparency = 1
-MinBtn.Text = "▼"
-MinBtn.TextColor3 = Gray
-MinBtn.TextSize = 12
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.Parent = Header
-
--- Container de botões
-local BtnContainer = Instance.new("Frame")
-BtnContainer.Size = UDim2.new(1, -20, 0, 145)
-BtnContainer.Position = UDim2.new(0, 10, 0, 45)
-BtnContainer.BackgroundTransparency = 1
-BtnContainer.Parent = MainFrame
-
-local BtnLayout = Instance.new("UIListLayout")
-BtnLayout.Padding = UDim.new(0, 8)
-BtnLayout.Parent = BtnContainer
-
--- Função criar botão
-local function CriarBotao(texto, cor)
+-- Botões
+local function CriarBotao(texto, posY, cor)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Size = UDim2.new(1, -16, 0, 32)
+    btn.Position = UDim2.new(0, 8, 0, posY)
     btn.BackgroundColor3 = cor or Card
     btn.Text = texto
     btn.TextColor3 = cor == Green and Color3.fromRGB(0,0,0) or White
-    btn.TextSize = 13
+    btn.TextSize = 12
     btn.Font = Enum.Font.GothamMedium
-    btn.Parent = BtnContainer
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.Parent = MainFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     return btn
 end
 
--- Botões
-local ESPBtn = CriarBotao("ESP BASE (OFF)", Card)
-local TPBtn = CriarBotao("TP BASE", Green)
-local SetBaseBtn = CriarBotao("MARCAR BASE AQUI", Card)
+local ESPBtn = CriarBotao("ESP BASE (OFF)", 40, Card)
+local TPBtn = CriarBotao("TP BASE", 78, Green)
+local SetBaseBtn = CriarBotao("MARCAR MINHA BASE", 116, Card)
+
+-- Status
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -16, 0, 18)
+StatusLabel.Position = UDim2.new(0, 8, 1, -22)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Base: Nao marcada"
+StatusLabel.TextColor3 = Gray
+StatusLabel.TextSize = 9
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = MainFrame
 
 --========================================
 -- FUNÇÕES
 --========================================
 
--- Notificação
 local function Notify(texto, cor)
     local notif = Instance.new("Frame")
-    notif.Size = UDim2.new(0, 250, 0, 45)
-    notif.Position = UDim2.new(0.5, -125, 0, -50)
+    notif.Size = UDim2.new(0, 220, 0, 40)
+    notif.Position = UDim2.new(0.5, -110, 0, -50)
     notif.BackgroundColor3 = Dark
     notif.Parent = ScreenGui
     Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
-    local nStroke = Instance.new("UIStroke", notif)
-    nStroke.Color = cor or Green
-    nStroke.Thickness = 2
+    Instance.new("UIStroke", notif).Color = cor or Green
     
     local nText = Instance.new("TextLabel")
     nText.Size = UDim2.new(1, 0, 1, 0)
     nText.BackgroundTransparency = 1
     nText.Text = texto
     nText.TextColor3 = cor or Green
-    nText.TextSize = 13
+    nText.TextSize = 12
     nText.Font = Enum.Font.GothamMedium
     nText.Parent = notif
     
-    -- Animar entrada
-    notif:TweenPosition(UDim2.new(0.5, -125, 0, 20), "Out", "Back", 0.4, true)
-    
-    task.delay(2, function()
-        notif:TweenPosition(UDim2.new(0.5, -125, 0, -50), "In", "Back", 0.3, true)
-        task.delay(0.4, function()
-            notif:Destroy()
-        end)
+    notif:TweenPosition(UDim2.new(0.5, -110, 0, 15), "Out", "Back", 0.3, true)
+    task.delay(1.5, function()
+        notif:TweenPosition(UDim2.new(0.5, -110, 0, -50), "In", "Back", 0.2, true)
+        task.delay(0.3, function() notif:Destroy() end)
     end)
 end
 
--- Criar Laser
+-- Criar Laser ESP
 local function CriarLaser()
-    if LaserBeam then LaserBeam:Destroy() end
+    if LaserBeam then
+        pcall(function() LaserBeam.beam:Destroy() end)
+        pcall(function() LaserBeam.basePart:Destroy() end)
+    end
     
-    -- Criar attachment no jogador
-    local att0 = Instance.new("Attachment")
+    local att0 = HumanoidRootPart:FindFirstChild("NYTRON_Att0") or Instance.new("Attachment")
     att0.Name = "NYTRON_Att0"
     att0.Parent = HumanoidRootPart
     
-    -- Criar part invisível na base
     local basePart = Instance.new("Part")
     basePart.Name = "NYTRON_BasePart"
-    basePart.Size = Vector3.new(1, 1, 1)
+    basePart.Size = Vector3.new(2, 2, 2)
     basePart.Position = BasePosition
     basePart.Anchored = true
     basePart.CanCollide = false
-    basePart.Transparency = 1
+    basePart.Transparency = 0.5
+    basePart.Color = Green
+    basePart.Material = Enum.Material.Neon
     basePart.Parent = Workspace
     
     local att1 = Instance.new("Attachment")
-    att1.Name = "NYTRON_Att1"
     att1.Parent = basePart
     
-    -- Criar beam
     local beam = Instance.new("Beam")
-    beam.Name = "NYTRON_Beam"
     beam.Attachment0 = att0
     beam.Attachment1 = att1
     beam.Color = ColorSequence.new(Green)
     beam.LightEmission = 1
-    beam.LightInfluence = 0
-    beam.Transparency = NumberSequence.new(0.3)
-    beam.Width0 = 0.5
-    beam.Width1 = 0.5
+    beam.Transparency = NumberSequence.new(0.2)
+    beam.Width0 = 1
+    beam.Width1 = 1
     beam.FaceCamera = true
     beam.Parent = HumanoidRootPart
     
     LaserBeam = {beam = beam, att0 = att0, att1 = att1, basePart = basePart}
 end
 
--- Destruir Laser
 local function DestruirLaser()
     if LaserBeam then
         pcall(function() LaserBeam.beam:Destroy() end)
         pcall(function() LaserBeam.att0:Destroy() end)
-        pcall(function() LaserBeam.att1:Destroy() end)
         pcall(function() LaserBeam.basePart:Destroy() end)
         LaserBeam = nil
     end
 end
 
--- Toggle ESP
 local function ToggleESP()
     if not BasePosition then
         Notify("Marque sua base primeiro!", Color3.fromRGB(255, 80, 80))
@@ -287,54 +252,70 @@ local function ToggleESP()
         ESPBtn.BackgroundColor3 = Green
         ESPBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         CriarLaser()
-        Notify("ESP Base ativado!")
+        Notify("ESP Ativado!")
     else
         ESPBtn.Text = "ESP BASE (OFF)"
         ESPBtn.BackgroundColor3 = Card
         ESPBtn.TextColor3 = White
         DestruirLaser()
-        Notify("ESP Base desativado!")
+        Notify("ESP Desativado!")
     end
 end
 
--- TP Base (leva tudo junto)
+-- TP BASE COM LOOP (ANTI-CHEAT BYPASS)
 local function TPBase()
     if not BasePosition then
         Notify("Marque sua base primeiro!", Color3.fromRGB(255, 80, 80))
         return
     end
     
-    -- Teleportar jogador
-    local destino = BasePosition + Vector3.new(0, 5, 0)
+    Notify("Teleportando...")
     
-    -- Método 1: PivotTo (leva tudo que está anexado)
+    local destino = CFrame.new(BasePosition + Vector3.new(0, 3, 0))
+    
+    -- Parar loop anterior se existir
+    if TPLoop then
+        TPLoop:Disconnect()
+        TPLoop = nil
+    end
+    
+    -- Desativar física temporariamente
+    local oldVelocity = HumanoidRootPart.Velocity
+    local oldGravity = Workspace.Gravity
+    
     pcall(function()
-        Character:PivotTo(CFrame.new(destino))
+        HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
     end)
     
-    -- Método 2: CFrame backup
-    pcall(function()
-        HumanoidRootPart.CFrame = CFrame.new(destino)
-    end)
-    
-    -- Pegar qualquer tool/brainrot que esteja segurando
-    pcall(function()
-        for _, tool in pairs(Character:GetChildren()) do
-            if tool:IsA("Tool") or tool:IsA("Model") then
-                -- A tool já vem junto com o personagem
-            end
+    -- Loop de teleport por 0.5 segundos
+    local startTime = tick()
+    TPLoop = RunService.Heartbeat:Connect(function()
+        if tick() - startTime > 0.5 then
+            TPLoop:Disconnect()
+            TPLoop = nil
+            Notify("Teleportado!")
+            return
         end
+        
+        pcall(function()
+            HumanoidRootPart.CFrame = destino
+            HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+            HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end)
+        
+        pcall(function()
+            Character:PivotTo(destino)
+        end)
     end)
-    
-    Notify("Teleportado pra base!")
 end
 
--- Marcar Base
 local function MarcarBase()
     BasePosition = HumanoidRootPart.Position
+    StatusLabel.Text = "Base: Marcada!"
+    StatusLabel.TextColor3 = Green
     Notify("Base marcada aqui!")
     
-    -- Se ESP tava ativo, recriar laser
     if LaserAtivo then
         DestruirLaser()
         CriarLaser()
@@ -345,40 +326,21 @@ end
 -- EVENTOS
 --========================================
 
--- Login
 LoginBtn.MouseButton1Click:Connect(function()
-    local key = KeyInput.Text
-    if key == "NYTRON-INFINITO" or key == "nytron-infinito" then
-        LoginStatus.Text = ""
+    local key = KeyInput.Text:upper()
+    if key == "NYTRON-INFINITO" then
         LoginFrame.Visible = false
         MainFrame.Visible = true
         Logado = true
         Notify("Logado com sucesso!")
     else
         LoginStatus.Text = "Key invalida!"
-        LoginStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
 end)
 
--- Botões
 ESPBtn.MouseButton1Click:Connect(ToggleESP)
 TPBtn.MouseButton1Click:Connect(TPBase)
 SetBaseBtn.MouseButton1Click:Connect(MarcarBase)
-
--- Minimizar
-local minimizado = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimizado = not minimizado
-    BtnContainer.Visible = not minimizado
-    
-    if minimizado then
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 45), "Out", "Quad", 0.2, true)
-        MinBtn.Text = "▲"
-    else
-        MainFrame:TweenSize(UDim2.new(0, 220, 0, 200), "Out", "Quad", 0.2, true)
-        MinBtn.Text = "▼"
-    end
-end)
 
 -- Draggable
 local dragging, dragStart, startPos
@@ -391,7 +353,7 @@ Header.InputBegan:Connect(function(input)
 end)
 Header.InputEnded:Connect(function() dragging = false end)
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if dragging then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
@@ -403,12 +365,11 @@ Player.CharacterAdded:Connect(function(char)
     Humanoid = char:WaitForChild("Humanoid")
     HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
     
-    -- Recriar laser se tava ativo
     if LaserAtivo and BasePosition then
         task.wait(1)
         CriarLaser()
     end
 end)
 
-print("[NYTRON] Script carregado!")
+print("[NYTRON] V6 Carregado!")
 print("[NYTRON] Key: NYTRON-INFINITO")
