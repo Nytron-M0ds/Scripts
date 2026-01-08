@@ -1,6 +1,6 @@
 --[[
-    NYTRON - Steal a Brainrot V8
-    ESP + TP + Speed + Pulo + Anti Hit
+    NYTRON - Steal a Brainrot V9
+    Métodos alternativos que funcionam!
     
     Key: NYTRON-INFINITO
 ]]
@@ -10,6 +10,7 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -33,19 +34,20 @@ local BasePosition = nil
 local LaserAtivo = false
 local LaserBeam = nil
 local Logado = false
-local TPLoop = nil
 
--- Estados dos toggles
+-- Estados
 local SpeedAtivo = false
 local PuloAtivo = false
 local AntiHitAtivo = false
+local TPAtivo = false
 
--- Valores originais
-local OriginalSpeed = 16
-local OriginalJump = 50
-
--- Conexões
+-- Conexões e objetos
+local SpeedConnection = nil
+local PuloConnection = nil
 local AntiHitConnection = nil
+local TPConnection = nil
+local BodyVelocity = nil
+local BodyPosition = nil
 
 -- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
@@ -135,7 +137,6 @@ TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.Parent = Header
 
--- Função criar botão
 local function CriarBotao(texto, posY, cor)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -16, 0, 28)
@@ -150,24 +151,20 @@ local function CriarBotao(texto, posY, cor)
     return btn
 end
 
--- Botões
 local ESPBtn = CriarBotao("ESP BASE (OFF)", 40, Card)
-local TPBtn = CriarBotao("TP BASE", 72, Green)
+local TPBtn = CriarBotao("TP BASE (SEGURAR)", 72, Green)
 local SetBaseBtn = CriarBotao("MARCAR BASE", 104, Card)
 
--- Separador
 local Sep = Instance.new("Frame")
 Sep.Size = UDim2.new(1, -16, 0, 1)
 Sep.Position = UDim2.new(0, 8, 0, 140)
 Sep.BackgroundColor3 = Gray
 Sep.Parent = MainFrame
 
--- Novos botões
 local SpeedBtn = CriarBotao("SPEED (OFF)", 148, Card)
 local PuloBtn = CriarBotao("PULO ALTO (OFF)", 180, Card)
 local AntiHitBtn = CriarBotao("ANTI HIT (OFF)", 212, Card)
 
--- Status
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -16, 0, 18)
 StatusLabel.Position = UDim2.new(0, 8, 1, -22)
@@ -279,40 +276,59 @@ local function ToggleESP()
     end
 end
 
--- TP BASE
-local function TPBase()
+-- TP BASE - SEGURAR PRA FICAR
+local function IniciarTP()
     if not BasePosition then
         Notify("Marque sua base!", Color3.fromRGB(255, 80, 80))
         return
     end
     
-    local destino = CFrame.new(BasePosition.X, BasePosition.Y, BasePosition.Z)
+    TPAtivo = true
+    Notify("Segure o botao...")
     
-    if TPLoop then TPLoop:Disconnect() end
+    local destino = CFrame.new(BasePosition.X, BasePosition.Y + 1, BasePosition.Z)
     
-    local healthConn
+    -- Criar BodyPosition pra manter no lugar
     pcall(function()
-        healthConn = Humanoid.HealthChanged:Connect(function()
-            Humanoid.Health = Humanoid.MaxHealth
-        end)
+        if BodyPosition then BodyPosition:Destroy() end
+        BodyPosition = Instance.new("BodyPosition")
+        BodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        BodyPosition.P = 100000
+        BodyPosition.D = 1000
+        BodyPosition.Position = destino.Position
+        BodyPosition.Parent = HumanoidRootPart
     end)
     
-    local startTime = tick()
-    TPLoop = RunService.Heartbeat:Connect(function()
-        if tick() - startTime > 0.8 then
-            TPLoop:Disconnect()
-            if healthConn then healthConn:Disconnect() end
-            pcall(function() Humanoid.Health = Humanoid.MaxHealth end)
-            Notify("Teleportado!")
-            return
-        end
+    -- Loop de TP enquanto segura
+    TPConnection = RunService.Heartbeat:Connect(function()
+        if not TPAtivo then return end
         
         pcall(function()
             HumanoidRootPart.CFrame = destino
             HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
             HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            
+            if BodyPosition then
+                BodyPosition.Position = destino.Position
+            end
         end)
     end)
+end
+
+local function PararTP()
+    TPAtivo = false
+    
+    if TPConnection then
+        TPConnection:Disconnect()
+        TPConnection = nil
+    end
+    
+    if BodyPosition then
+        BodyPosition:Destroy()
+        BodyPosition = nil
+    end
+    
+    Notify("Solte pra andar!")
 end
 
 local function MarcarBase()
@@ -327,7 +343,7 @@ local function MarcarBase()
     end
 end
 
--- SPEED
+-- SPEED - Usando CFrame
 local function ToggleSpeed()
     SpeedAtivo = not SpeedAtivo
     
@@ -335,22 +351,35 @@ local function ToggleSpeed()
         SpeedBtn.Text = "SPEED (ON)"
         SpeedBtn.BackgroundColor3 = Green
         SpeedBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-        pcall(function()
-            Humanoid.WalkSpeed = 80
+        
+        local speedMultiplier = 2.5
+        
+        SpeedConnection = RunService.RenderStepped:Connect(function(dt)
+            pcall(function()
+                local moveDir = Humanoid.MoveDirection
+                if moveDir.Magnitude > 0 then
+                    local boost = moveDir * speedMultiplier
+                    HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + Vector3.new(boost.X, 0, boost.Z)
+                end
+            end)
         end)
+        
         Notify("Speed ON")
     else
         SpeedBtn.Text = "SPEED (OFF)"
         SpeedBtn.BackgroundColor3 = Card
         SpeedBtn.TextColor3 = White
-        pcall(function()
-            Humanoid.WalkSpeed = OriginalSpeed
-        end)
+        
+        if SpeedConnection then
+            SpeedConnection:Disconnect()
+            SpeedConnection = nil
+        end
+        
         Notify("Speed OFF")
     end
 end
 
--- PULO ALTO
+-- PULO ALTO - Usando BodyVelocity
 local function TogglePulo()
     PuloAtivo = not PuloAtivo
     
@@ -358,24 +387,37 @@ local function TogglePulo()
         PuloBtn.Text = "PULO ALTO (ON)"
         PuloBtn.BackgroundColor3 = Green
         PuloBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-        pcall(function()
-            Humanoid.JumpPower = 120
-            Humanoid.JumpHeight = 30
+        
+        PuloConnection = UserInputService.JumpRequest:Connect(function()
+            pcall(function()
+                -- Criar impulso pra cima
+                local bv = Instance.new("BodyVelocity")
+                bv.MaxForce = Vector3.new(0, math.huge, 0)
+                bv.Velocity = Vector3.new(0, 100, 0)
+                bv.Parent = HumanoidRootPart
+                
+                task.delay(0.2, function()
+                    bv:Destroy()
+                end)
+            end)
         end)
+        
         Notify("Pulo Alto ON")
     else
         PuloBtn.Text = "PULO ALTO (OFF)"
         PuloBtn.BackgroundColor3 = Card
         PuloBtn.TextColor3 = White
-        pcall(function()
-            Humanoid.JumpPower = OriginalJump
-            Humanoid.JumpHeight = 7.2
-        end)
+        
+        if PuloConnection then
+            PuloConnection:Disconnect()
+            PuloConnection = nil
+        end
+        
         Notify("Pulo Alto OFF")
     end
 end
 
--- ANTI HIT / ANTI KNOCKBACK
+-- ANTI HIT - Usando BodyPosition pra travar
 local function ToggleAntiHit()
     AntiHitAtivo = not AntiHitAtivo
     
@@ -384,15 +426,29 @@ local function ToggleAntiHit()
         AntiHitBtn.BackgroundColor3 = Green
         AntiHitBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         
-        -- Anti Knockback: zera velocidade constantemente
+        local lastPos = HumanoidRootPart.Position
+        local lastTime = tick()
+        
         AntiHitConnection = RunService.Heartbeat:Connect(function()
             pcall(function()
-                local vel = HumanoidRootPart.Velocity
-                -- Se velocidade for muito alta (knockback), zera
-                if vel.Magnitude > 50 then
-                    HumanoidRootPart.Velocity = Vector3.new(0, vel.Y, 0)
-                    HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, HumanoidRootPart.AssemblyLinearVelocity.Y, 0)
+                local currentPos = HumanoidRootPart.Position
+                local currentTime = tick()
+                local dt = currentTime - lastTime
+                
+                if dt > 0 then
+                    local speed = (currentPos - lastPos).Magnitude / dt
+                    
+                    -- Se velocidade muito alta (knockback), volta pro lugar
+                    if speed > 100 then
+                        HumanoidRootPart.CFrame = CFrame.new(lastPos)
+                        HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+                        HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    else
+                        lastPos = currentPos
+                    end
                 end
+                
+                lastTime = currentTime
             end)
         end)
         
@@ -428,7 +484,14 @@ LoginBtn.MouseButton1Click:Connect(function()
 end)
 
 ESPBtn.MouseButton1Click:Connect(ToggleESP)
-TPBtn.MouseButton1Click:Connect(TPBase)
+
+-- TP - Segurar pra ficar
+TPBtn.MouseButton1Down:Connect(IniciarTP)
+TPBtn.MouseButton1Up:Connect(PararTP)
+TPBtn.MouseLeave:Connect(function()
+    if TPAtivo then PararTP() end
+end)
+
 SetBaseBtn.MouseButton1Click:Connect(MarcarBase)
 SpeedBtn.MouseButton1Click:Connect(ToggleSpeed)
 PuloBtn.MouseButton1Click:Connect(TogglePulo)
@@ -457,38 +520,37 @@ Player.CharacterAdded:Connect(function(char)
     Humanoid = char:WaitForChild("Humanoid")
     HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
     
-    -- Reaplicar configurações
-    task.wait(0.5)
+    -- Limpar conexões antigas
+    if SpeedConnection then SpeedConnection:Disconnect() SpeedConnection = nil end
+    if PuloConnection then PuloConnection:Disconnect() PuloConnection = nil end
+    if AntiHitConnection then AntiHitConnection:Disconnect() AntiHitConnection = nil end
+    if TPConnection then TPConnection:Disconnect() TPConnection = nil end
+    if BodyPosition then BodyPosition:Destroy() BodyPosition = nil end
     
-    if SpeedAtivo then
-        pcall(function() Humanoid.WalkSpeed = 80 end)
-    end
+    -- Resetar estados
+    SpeedAtivo = false
+    PuloAtivo = false
+    AntiHitAtivo = false
+    TPAtivo = false
     
-    if PuloAtivo then
-        pcall(function() 
-            Humanoid.JumpPower = 120
-            Humanoid.JumpHeight = 30
-        end)
-    end
+    -- Atualizar botões
+    SpeedBtn.Text = "SPEED (OFF)"
+    SpeedBtn.BackgroundColor3 = Card
+    SpeedBtn.TextColor3 = White
+    
+    PuloBtn.Text = "PULO ALTO (OFF)"
+    PuloBtn.BackgroundColor3 = Card
+    PuloBtn.TextColor3 = White
+    
+    AntiHitBtn.Text = "ANTI HIT (OFF)"
+    AntiHitBtn.BackgroundColor3 = Card
+    AntiHitBtn.TextColor3 = White
     
     if LaserAtivo and BasePosition then
+        task.wait(1)
         CriarLaser()
-    end
-    
-    -- Reconectar Anti Hit
-    if AntiHitAtivo then
-        if AntiHitConnection then AntiHitConnection:Disconnect() end
-        AntiHitConnection = RunService.Heartbeat:Connect(function()
-            pcall(function()
-                local vel = HumanoidRootPart.Velocity
-                if vel.Magnitude > 50 then
-                    HumanoidRootPart.Velocity = Vector3.new(0, vel.Y, 0)
-                    HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, HumanoidRootPart.AssemblyLinearVelocity.Y, 0)
-                end
-            end)
-        end)
     end
 end)
 
-print("[NYTRON] V8 Carregado!")
+print("[NYTRON] V9 Carregado!")
 print("[NYTRON] Key: NYTRON-INFINITO")
